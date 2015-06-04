@@ -4,7 +4,6 @@ module Parser
 
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
-import Text.ParserCombinators.Parsec.Number (int)
 
 import Syntax
 import Lexer
@@ -15,11 +14,9 @@ varP = Var <$> identifier
 intP :: Parser Expr
 intP = Int <$> integer
 
-boolParser :: Parser Expr
-boolParser = undefined
-
-timesParser :: Parser Expr
-timesParser = undefined
+boolP :: Parser Expr
+boolP = try (Bool True <$ reserved "true")
+        <|> (Bool False <$ reserved "false")
 
 termP :: Parser Expr
 termP =     parens exprP
@@ -28,21 +25,6 @@ termP =     parens exprP
 
 opP :: Parser Expr
 opP = buildExpressionParser aOperators termP
-
-equalParser :: Parser Expr
-equalParser = do
-  spaces
-  a <- exprP
-  between spaces spaces $ string "="
-  b <- exprP
-  return $ Less a b
-
-lessP :: Parser Expr
-lessP = do
-  expr1 <- termP
-  reserved "<"
-  expr2 <- termP
-  return $ Less expr1 expr2
 
 ifP :: Parser Expr
 ifP = do
@@ -80,7 +62,6 @@ applyP = do
   let hack =     try (parens exprP)
              <|> try funP
              <|> try ifP
-             <|> try lessP
              <|> try opP
              <|> try intP
   expr1 <- hack
@@ -92,9 +73,9 @@ exprP =     try (parens exprP)
         <|> try applyP
         <|> try funP
         <|> try ifP
-        <|> try lessP
         <|> try opP
-        <|> intP
+        <|> try intP
+        <|> try boolP
 
 defP :: Parser ToplevelCmd
 defP = do

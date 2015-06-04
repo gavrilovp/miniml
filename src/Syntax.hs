@@ -9,9 +9,9 @@ module Syntax
 type Name = String
 
 -- Types
-data Ty = TInt
-        | TBool
-        | TArrow Ty Ty
+data Ty = TInt         -- integers
+        | TBool        -- booleans
+        | TArrow Ty Ty -- functions
         deriving Show
 
 -- Expressions

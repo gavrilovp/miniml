@@ -25,4 +25,5 @@ main = do
   print ast
   ast <- parseFile "tests/apply.miniml"
   print ast
-
+  ast <- parseFile "tests/bool.miniml"
+  print ast
