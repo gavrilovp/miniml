@@ -1,7 +1,7 @@
 module Syntax
        ( Name
        , Expr (..)
-       , ToplevelCmd
+       , ToplevelCmd (..)
        ) where
 
 -- Variable names
@@ -11,10 +11,11 @@ type Name = String
 data Ty = TInt
         | TBool
         | TArrow Ty Ty
+        deriving Show
 
 -- Expressions
 data Expr = Var Name
-          | Int Int
+          | Int Integer
           | Bool Bool
           | Times Expr Expr
           | Plus Expr Expr
@@ -24,7 +25,9 @@ data Expr = Var Name
           | If Expr Expr Expr
           | Fun Name Name Ty Ty Expr 
           | Apply Expr Expr
+          deriving Show
 
 -- Toplevel commands
 data ToplevelCmd = Expr Expr
                  | Def Name Expr
+                 deriving Show

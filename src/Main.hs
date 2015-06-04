@@ -1,7 +1,24 @@
-module Main (main) where
+module Main
+       ( main
+       ) where
 
-import Parser
+import Text.ParserCombinators.Parsec
 
-main = putStrLn "miniml"
-       
-       
+import Syntax
+import Lexer
+import Parser (toplevelCmdP)
+
+parseFile :: String -> IO ToplevelCmd
+parseFile file = do
+  program  <- readFile file
+  case parse toplevelCmdP "" program of
+   Left e  -> print e >> fail "parse error"
+   Right r -> return r
+
+main :: IO ()
+main = do
+  ast <- parseFile "tests/let.miniml" 
+  print ast
+  ast <- parseFile "tests/if.miniml"
+  print ast
+
