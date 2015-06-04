@@ -54,10 +54,33 @@ ifP = do
   expr2<- exprP
   return $ If cond expr1 expr2
 
+tyP :: Parser Ty
+tyP = do
+  reserved "int"
+  return TInt
+
+funP :: Parser Expr
+funP = do
+  reserved "fun"
+  fn <- identifier
+  let vct = do
+        argName <- identifier
+        colon
+        argType <- tyP
+        return (argName, argType)
+  (argName, argType) <- parens vct
+  colon
+  fType <- tyP
+  reserved "is"
+  expr <- exprP
+  return $ Fun fn argName argType fType expr  
+  
+
 -- add depth restriction for left recursion
 -- or chainl1
 exprP :: Parser Expr
 exprP =     try (parens exprP)
+        <|> try funP
         <|> try ifP
         <|> try lessP
         <|> try opP

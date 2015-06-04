@@ -5,6 +5,7 @@ module Lexer
        , integer
        , aOperators
        , parens
+       , colon
        ) where
 
 import Text.ParserCombinators.Parsec
@@ -22,6 +23,9 @@ miniMLDef =
                                      , "else"
                                      , "true"
                                      , "false"
+                                     , "int"
+                                     , "fun"
+                                     , "is"
                                      ]
            , Token.reservedOpNames = [ "+"
                                      , "-"
@@ -43,8 +47,11 @@ parens     = Token.parens     lexer -- parses surrounding parenthesis:
 integer    = Token.integer    lexer -- parses an integer
 semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
+colon      = Token.colon      lexer
 
-aOperators = [ [Infix  (reservedOp "*"   >> return (Times)) AssocLeft]
-             , [Infix  (reservedOp "+"   >> return (Plus )) AssocLeft,
-                Infix  (reservedOp "-"   >> return (Minus)) AssocLeft]
+aOperators = [ [Infix (reservedOp "<" >> return (Less )) AssocLeft,
+                Infix (reservedOp "=" >> return (Equal)) AssocLeft]
+             , [Infix (reservedOp "*" >> return (Times)) AssocLeft]
+             , [Infix (reservedOp "+" >> return (Plus )) AssocLeft,
+                Infix (reservedOp "-" >> return (Minus)) AssocLeft]
              ]

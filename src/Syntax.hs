@@ -1,5 +1,6 @@
 module Syntax
        ( Name
+       , Ty (..)
        , Expr (..)
        , ToplevelCmd (..)
        ) where

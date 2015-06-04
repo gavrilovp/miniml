@@ -21,4 +21,6 @@ main = do
   print ast
   ast <- parseFile "tests/if.miniml"
   print ast
+  ast <- parseFile "tests/fun.miniml"
+  print ast
 
