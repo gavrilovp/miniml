@@ -74,12 +74,22 @@ funP = do
   reserved "is"
   expr <- exprP
   return $ Fun fn argName argType fType expr  
-  
 
--- add depth restriction for left recursion
--- or chainl1
+applyP :: Parser Expr
+applyP = do
+  let hack =     try (parens exprP)
+             <|> try funP
+             <|> try ifP
+             <|> try lessP
+             <|> try opP
+             <|> try intP
+  expr1 <- hack
+  expr2 <- hack
+  return $ Apply expr1 expr2
+
 exprP :: Parser Expr
 exprP =     try (parens exprP)
+        <|> try applyP
         <|> try funP
         <|> try ifP
         <|> try lessP
