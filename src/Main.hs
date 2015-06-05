@@ -3,10 +3,12 @@ module Main
        ) where
 
 import Text.ParserCombinators.Parsec
+import qualified Data.Map as M
 
 import Syntax
 import Lexer
 import Parser (toplevelCmdP)
+import TypeCheck
 
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do

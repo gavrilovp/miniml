@@ -12,7 +12,7 @@ type Name = String
 data Ty = TInt         -- integers
         | TBool        -- booleans
         | TArrow Ty Ty -- functions
-        deriving Show
+        deriving (Eq, Show)
 
 -- Expressions
 data Expr = Var Name
