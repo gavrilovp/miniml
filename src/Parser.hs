@@ -64,6 +64,7 @@ applyP = do
              <|> try ifP
              <|> try opP
              <|> try intP
+             <|> try varP
   expr1 <- hack
   expr2 <- hack
   return $ Apply expr1 expr2

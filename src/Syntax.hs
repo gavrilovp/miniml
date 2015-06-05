@@ -12,7 +12,12 @@ type Name = String
 data Ty = TInt         -- integers
         | TBool        -- booleans
         | TArrow Ty Ty -- functions
-        deriving Show
+        deriving (Eq)
+
+instance Show Ty where
+  show (TInt) = "int"
+  show (TBool) = "bool"
+  show (TArrow ty1 ty2) = show ty1 ++ " -> " ++ show ty2
 
 -- Expressions
 data Expr = Var Name
