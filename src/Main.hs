@@ -7,6 +7,7 @@ import Text.ParserCombinators.Parsec
 import Syntax
 import Lexer
 import Parser (toplevelCmdP)
+import Codegen
 
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do
