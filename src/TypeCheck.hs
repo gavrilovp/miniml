@@ -1,5 +1,6 @@
 module TypeCheck
-       ( check
+       ( typeOf
+       , Ctx
        ) where
 
 import Control.Exception
@@ -19,6 +20,9 @@ typeOf :: Ctx -> Expr -> Ty
 typeOf ctx (Var v) = ctx M.! v -- replace with my exception?
 typeOf _ (Int _) = TInt
 typeOf _ (Bool _) = TBool
+typeOf ctx (Times e1 e2)
+  | check ctx TInt e1 && check ctx TInt e2 = TInt
+  | otherwise = throw (TE "wrong type")
 typeOf ctx (Plus e1 e2)
   | check ctx TInt e1 && check ctx TInt e2 = TInt
   | otherwise = throw (TE "wrong type")
@@ -51,6 +55,7 @@ check ctx ty e =
   in
    if ty /= ty'
    then
-     throw (TE "wrong type")
+     throw (TE $ show e ++ " has type " ++ show ty'
+            ++ " but is used as if it has type " ++ show ty)
    else
      True

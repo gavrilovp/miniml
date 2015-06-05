@@ -49,8 +49,8 @@ semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 colon      = Token.colon      lexer
 
-aOperators = [ [Infix (reservedOp "<" >> return (Less )) AssocLeft,
-                Infix (reservedOp "=" >> return (Equal)) AssocLeft]
+aOperators = [ [Infix (reservedOp "<" >> return (Less )) AssocNone,
+                Infix (reservedOp "=" >> return (Equal)) AssocNone]
              , [Infix (reservedOp "*" >> return (Times)) AssocLeft]
              , [Infix (reservedOp "+" >> return (Plus )) AssocLeft,
                 Infix (reservedOp "-" >> return (Minus)) AssocLeft]
