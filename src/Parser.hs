@@ -12,23 +12,21 @@ varP :: Parser Expr
 varP = Var <$> identifier
 
 intP :: Parser Expr
-intP = Int <$> integer
+intP = Int <$> try integer
 
 boolP :: Parser Expr
-boolP = try (Bool True <$ reserved "true")
-        <|> (Bool False <$ reserved "false")
+boolP =     Bool True <$ (try $ reserved "true")
+        <|> Bool False <$ (try $ reserved "false")
 
 termP :: Parser Expr
-termP =     parens exprP
-        <|> varP
-        <|> intP
+termP = parens exprP <|> try applyP <|> intP <|> varP  
 
 opP :: Parser Expr
 opP = buildExpressionParser aOperators termP
 
 ifP :: Parser Expr
 ifP = do
-  reserved "if"
+  try $ reserved "if"
   cond  <- exprP
   reserved "then"
   expr1 <- exprP
@@ -43,7 +41,7 @@ tyP = do
 
 funP :: Parser Expr
 funP = do
-  reserved "fun"
+  try $ reserved "fun"
   fn <- identifier
   let vct = do
         argName <- identifier
@@ -59,33 +57,22 @@ funP = do
 
 applyP :: Parser Expr
 applyP = do
-  let hack =     try (parens exprP)
-             <|> try funP
-             <|> try ifP
-             <|> try opP
-             <|> try intP
-             <|> try varP
-  expr1 <- hack
-  expr2 <- hack
-  return $ Apply expr1 expr2
+  let hack = parens exprP <|> funP <|> intP <|> varP
+      apP :: Parser (Expr -> Expr -> Expr)
+      apP = return Apply
+  chainl1 hack apP
 
 exprP :: Parser Expr
-exprP =     try (parens exprP)
-        <|> try applyP
-        <|> try funP
-        <|> try ifP
-        <|> try opP
-        <|> try intP
-        <|> try boolP
+exprP = parens exprP <|> opP <|> funP <|> ifP <|> applyP
+        <|> intP <|> boolP <|> varP <* eof           
 
 defP :: Parser ToplevelCmd
 defP = do
-  reserved "let"
+  try $ reserved "let"
   var  <- identifier
   reservedOp "="
   expr <- exprP
   return $ Def var expr
 
 toplevelCmdP :: Parser ToplevelCmd
-toplevelCmdP =     defP
-               <|> Expr <$> exprP
+toplevelCmdP = defP <|> Expr <$> exprP

@@ -44,7 +44,7 @@ parens     = Token.parens     lexer -- parses surrounding parenthesis:
                                     -- parens p
                                     -- takes care of the parenthesis and
                                     -- uses p to parse what's inside them
-integer    = Token.integer    lexer -- parses an integer
+integer    = Token.natural    lexer -- parses an integer
 semi       = Token.semi       lexer -- parses a semicolon
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 colon      = Token.colon      lexer

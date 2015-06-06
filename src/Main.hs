@@ -18,6 +18,7 @@ import Debug.Trace
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do
   program  <- readFile file
+  putStr program
   case parse toplevelCmdP "" program of
    Left e  -> print e >> fail "parse error"
    Right r -> return r
@@ -62,4 +63,6 @@ main = do
   print ast
   ast <- parseFile "tests/bool.miniml"
   print ast
-  -- shell
+  ast <- parseFile "tests/minus.miniml"
+  print ast
+  shell
