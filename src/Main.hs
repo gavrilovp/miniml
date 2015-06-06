@@ -12,6 +12,7 @@ import Syntax
 import Lexer
 import Parser (toplevelCmdP)
 import TypeCheck
+import Emit
 
 import Debug.Trace
 

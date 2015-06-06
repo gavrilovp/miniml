@@ -29,7 +29,7 @@ data Expr = Var Name
           | Equal Expr Expr
           | Less Expr Expr
           | If Expr Expr Expr
-          | Fun Name Name Ty Ty Expr 
+          | Fun Name Name Ty Ty Expr
           | Apply Expr Expr
           deriving Show
 
