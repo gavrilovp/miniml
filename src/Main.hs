@@ -52,7 +52,7 @@ shell' ctx = do
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
    Left e -> print e >> shell' ctx
-   Right ast -> (putStrLn $ str ++ "\n" ++ (show $ encodePretty ast)) >> shell' ctx'
+   Right ast -> putStrLn str >> (B.putStrLn $ encodePretty ast) >> shell' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
 
