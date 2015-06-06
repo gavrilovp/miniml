@@ -1,3 +1,5 @@
+{-# OverloadedStrings #-}
+
 module Main
        ( main
        ) where
@@ -7,6 +9,8 @@ import Control.Monad.State
 import System.IO
 import Text.ParserCombinators.Parsec hiding (State)
 import qualified Data.Map as M
+import Data.Aeson.Encode.Pretty
+import qualified Data.ByteString.Lazy as B
 
 import Syntax
 import Lexer
@@ -48,22 +52,22 @@ shell' ctx = do
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
    Left e -> print e >> shell' ctx
-   Right ast -> traceShow ast $ putStrLn str >> shell' ctx'
+   Right ast -> (putStrLn $ str ++ "\n" ++ (show $ encodePretty ast)) >> shell' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
 
 main :: IO ()
 main = do
   ast <- parseFile "tests/let.miniml" 
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/if.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/fun.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/apply.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/bool.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/minus.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   shell
