@@ -1,9 +1,14 @@
+{-# LANGUAGE DeriveGeneric,DeriveAnyClass #-}
+
 module Syntax
        ( Name
        , Ty (..)
        , Expr (..)
        , ToplevelCmd (..)
        ) where
+
+import Data.Aeson (ToJSON)
+import GHC.Generics
 
 -- Variable names
 type Name = String
@@ -12,7 +17,7 @@ type Name = String
 data Ty = TInt         -- integers
         | TBool        -- booleans
         | TArrow Ty Ty -- functions
-        deriving (Eq)
+        deriving (Eq, Generic, ToJSON)
 
 instance Show Ty where
   show (TInt) = "int"
@@ -31,9 +36,9 @@ data Expr = Var Name
           | If Expr Expr Expr
           | Fun Name Name Ty Ty Expr
           | Apply Expr Expr
-          deriving Show
+          deriving (Show, Generic, ToJSON)
 
 -- Toplevel commands
 data ToplevelCmd = Expr Expr
                  | Def Name Expr
-                 deriving Show
+                 deriving (Show, Generic, ToJSON)

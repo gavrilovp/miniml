@@ -1,3 +1,5 @@
+{-# OverloadedStrings #-}
+
 module Main
        ( main
        ) where
@@ -6,8 +8,10 @@ import Control.Monad
 import Control.Monad.State
 import System.IO
 import Text.ParserCombinators.Parsec hiding (State)
+import Data.Aeson.Encode.Pretty
 import qualified Data.Map as M
 import qualified LLVM.General.AST as AST
+import qualified Data.ByteString.Lazy as B
 
 import Syntax
 import Lexer
@@ -53,24 +57,28 @@ shell' mod ctx = do
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
    Left e -> print e >> shell' mod ctx
-   Right ast -> traceShow ast $ putStrLn res >> shell' mod' ctx'
+   Right ast -> do
+     mod' <- codegen mod ast
+     putStrLn str >> (B.putStrLn $ encodePretty ast) >> shell' mod' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
        res = "AST: " ++ str ++ "\nLLVM bytecode:\n" ++ bytecode
-       (mod', bytecode) = (mod, "")
+       bytecode = ""
 
 main :: IO ()
 main = do
+{--
   ast <- parseFile "tests/let.miniml" 
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/if.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/fun.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/apply.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/bool.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/minus.miniml"
-  print ast
+  B.putStrLn $ encodePretty ast
+--}
   shell
