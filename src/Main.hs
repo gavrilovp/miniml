@@ -7,14 +7,19 @@ import Control.Monad.State
 import System.IO
 import Text.ParserCombinators.Parsec hiding (State)
 import qualified Data.Map as M
+import qualified LLVM.General.AST as AST
 
 import Syntax
 import Lexer
 import Parser (toplevelCmdP)
 import TypeCheck
 import Emit
+import Codegen
 
 import Debug.Trace
+
+initModule :: AST.Module
+initModule = emptyModule "MiniML"
 
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do
@@ -41,16 +46,19 @@ shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
   shell' (M.empty :: Ctx)
 
-shell' :: Ctx ->  IO ()
+shell' :: Ctx -> IO ()
 shell' ctx = do
   putStr "MiniML> "
   hFlush stdout
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
    Left e -> print e >> shell' ctx
-   Right ast -> traceShow ast $ putStrLn str >> shell' ctx'
+   Right ast -> traceShow ast $ putStrLn res >> shell' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
+       mod = initModule
+       res = "AST: " ++ str ++ "\nLLVM bytecode:\n" ++ bytecode
+       bytecode = ""
 
 main :: IO ()
 main = do
