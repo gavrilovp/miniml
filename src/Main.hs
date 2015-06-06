@@ -44,21 +44,20 @@ exec (Expr e) = do
 shell :: IO ()
 shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
-  shell' (M.empty :: Ctx)
+  shell' (initModule) (M.empty :: Ctx)
 
-shell' :: Ctx -> IO ()
-shell' ctx = do
+shell' :: AST.Module -> Ctx -> IO ()
+shell' mod ctx = do
   putStr "MiniML> "
   hFlush stdout
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
-   Left e -> print e >> shell' ctx
-   Right ast -> traceShow ast $ putStrLn res >> shell' ctx'
+   Left e -> print e >> shell' mod ctx
+   Right ast -> traceShow ast $ putStrLn res >> shell' mod' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
-       mod = initModule
        res = "AST: " ++ str ++ "\nLLVM bytecode:\n" ++ bytecode
-       bytecode = ""
+       (mod', bytecode) = (mod, "")
 
 main :: IO ()
 main = do

@@ -5,6 +5,7 @@ module Emit where
 import LLVM.General.Module
 import LLVM.General.Context
 
+import LLVM.General.AST.Global
 import qualified LLVM.General.AST as AST
 import qualified LLVM.General.AST.Type as T
 import qualified LLVM.General.AST.Constant as C
@@ -27,9 +28,9 @@ toType S.TBool = bool
 toSig :: (String, S.Ty) -> [(AST.Type, AST.Name)]
 toSig (name, t) = [((toType t), AST.Name name)]
 
-codegenTop :: S.Expr -> LLVM ()
-codegenTop (S.Fun name argname argtype rettype body) = do
-  define (toType rettype) name fnargs bls
+genFun :: S.Expr -> ([(AST.Type, AST.Name)], [BasicBlock])
+genFun (S.Fun name argname argtype rettype body) =
+  (fnargs, bls)
   where
     fnargs = toSig (argname, argtype)
     bls = createBlocks $ execCodegen $ do
@@ -40,7 +41,15 @@ codegenTop (S.Fun name argname argtype rettype body) = do
       assign argname var
       cgen body >>= ret
 
-codegenTop exp = do
+codegenTop :: S.ToplevelCmd -> LLVM ()
+codegenTop (S.Def var_name (S.Fun name argname argtype rettype body)) = do
+  define (toType rettype) name fnargs bls
+  define (toType rettype) var_name var_args var_bls
+  where
+    (fnargs, bls) = genFun (S.Fun name argname argtype rettype body)
+    (var_args, var_bls) = genFun (S.Fun var_name argname argtype rettype pseudo_body)
+    pseudo_body = (S.Apply (S.Var name) (S.Var argname))
+codegenTop (S.Expr exp) = do
   define int "main" [] blks
   where
     blks = createBlocks $ execCodegen $ do
@@ -81,12 +90,12 @@ cgen binary =
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
-codegen :: AST.Module -> [S.Expr] -> IO AST.Module
+codegen :: AST.Module -> S.ToplevelCmd -> IO AST.Module
 codegen mod fns = withContext $ \context ->
   liftError $ withModuleFromAST context newast $ \m -> do
     llstr <- moduleLLVMAssembly m
     putStrLn llstr
     return newast
   where
-    modn    = mapM codegenTop fns
+    modn    = codegenTop fns
     newast  = runLLVM mod modn
