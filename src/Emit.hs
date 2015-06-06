@@ -18,8 +18,9 @@ import Control.Monad.Except
 import Control.Applicative
 import qualified Data.Map as Map
 
-import Codegen
 import qualified Syntax as S
+import Codegen
+import JIT
 
 import Debug.Trace
 
@@ -46,7 +47,7 @@ genFun (S.Fun name argname argtype rettype body) =
 codegenTop :: S.ToplevelCmd -> LLVM ()
 codegenTop (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
-  --define (toType rettype) var_name var_args var_bls
+  define (toType rettype) var_name var_args var_bls
   where
     (fnargs, bls) = genFun (S.Fun name argname argtype rettype body)
     (var_args, var_bls) = genFun (S.Fun var_name argname argtype rettype pseudo_body)
@@ -131,11 +132,15 @@ liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
 codegen :: AST.Module -> S.ToplevelCmd -> IO AST.Module
-codegen mod fns = withContext $ \context ->
-  liftError $ withModuleFromAST context newast $ \m -> do
-    llstr <- moduleLLVMAssembly m
-    putStrLn llstr
-    return newast
+codegen mod fns = do
+  res <- runJIT oldast
+  case res of
+    Right newast -> return $ fn newast
+    Left err     -> putStrLn err >> return oldast
   where
     modn    = codegenTop fns
-    newast  = runLLVM mod modn
+    oldast  = runLLVM mod modn
+    fn ast  =
+      case fns of
+        S.Expr _    -> mod -- don't save main() function
+        otherwise   -> ast
