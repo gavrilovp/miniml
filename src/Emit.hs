@@ -27,26 +27,6 @@ import JIT
 import Debug.Trace
 
 -------------------------------------------------------------------------------
--- Contexts
--------------------------------------------------------------------------------
-
-type VarCtx = Map.Map String AST.Name
-data CodegenCtx
-  = CodegenCtx {
-    typeContext  :: TC.Ctx
-  , varContext   :: VarCtx
-  }
-
-varType :: CodegenCtx -> S.Expr -> S.Ty
-varType ctx expr = TC.typeOf (typeContext ctx) expr
-
-emptyCtx :: CodegenCtx
-emptyCtx = CodegenCtx {
-    typeContext = Map.empty :: TC.Ctx
-  , varContext  = Map.empty :: VarCtx
-}
-
--------------------------------------------------------------------------------
 -- Code generation
 -------------------------------------------------------------------------------
 
@@ -159,12 +139,12 @@ cgen globVars binary =
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
-codegen :: GeneratorState -> S.ToplevelCmd -> CodegenCtx -> IO ((Maybe String), (Maybe String), CodegenCtx, GeneratorState)
+codegen :: GeneratorState -> S.ToplevelCmd -> TC.Ctx -> IO ((Maybe String), (Maybe String), GeneratorState)
 codegen mod fns ctx = do
   res <- runJIT oldast
   case res of
-    Right (val, code, newast)   -> return $ (val, code, ctx, fn newast)
-    Left err                    -> putStrLn err >> return (Nothing, Nothing, ctx, oldast)
+    Right (val, code, newast)   -> return $ (val, code, fn newast)
+    Left err                    -> putStrLn err >> return (Nothing, Nothing, oldast)
   where
     modn    = codegenTop (vars mod) fns
     oldast  = runLLVM mod modn

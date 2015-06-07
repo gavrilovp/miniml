@@ -46,9 +46,9 @@ exec (Expr e) = do
 shell :: IO ()
 shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
-  shell' (initModule) emptyCtx
+  shell' (initModule) (M.empty :: Ctx)
 
-shell' :: GeneratorState -> CodegenCtx -> IO ()
+shell' :: GeneratorState -> Ctx -> IO ()
 shell' mod ctx = do
   putStr "MiniML> "
   hFlush stdout
@@ -56,11 +56,11 @@ shell' mod ctx = do
   case parse toplevelCmdP "" cmd of
     Left e -> print e >> shell' mod ctx
     Right ast -> do
-      (evaluated, bytecode, new_context, mod') <- codegen mod ast ctx'
-      putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode) >> shell' mod' new_context
+      (evaluated, bytecode, mod') <- codegen mod ast ctx'
+      putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode)
+      shell' mod' ctx'
       where
-        ctx' = CodegenCtx { typeContext = local_ctx, varContext = (varContext ctx) }
-        (str, local_ctx) = runState (exec ast) (typeContext ctx')
+        (str, ctx') = runState (exec ast) ctx
         mk_str evaluated bytecode =
           "\n" ++ llvm_str ++ "\n" ++ cmd ++ "\n" ++ value
           where
