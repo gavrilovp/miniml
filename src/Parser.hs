@@ -75,4 +75,4 @@ defP = do
   return $ Def var expr
 
 toplevelCmdP :: Parser ToplevelCmd
-toplevelCmdP = (defP <|> Expr <$> exprP) <* eof
+toplevelCmdP = spaces *> (defP <|> Expr <$> exprP) <* eof
