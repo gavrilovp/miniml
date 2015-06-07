@@ -1,5 +1,3 @@
-{-# OverloadedStrings #-}
-
 module Main
        ( main
        ) where
@@ -56,29 +54,25 @@ shell' mod ctx = do
   hFlush stdout
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
-   Left e -> print e >> shell' mod ctx
-   Right ast -> do
-     mod' <- codegen mod ast
-     putStrLn str >> (B.putStrLn $ encodePretty ast) >> shell' mod' ctx'
-     where
-       (str, ctx') = runState (exec ast) ctx
-       res = "AST: " ++ str ++ "\nLLVM bytecode:\n" ++ bytecode
-       bytecode = ""
+    Left e -> print e >> shell' mod ctx
+    Right ast -> do
+      (evaluated, bytecode, mod') <- codegen mod ast
+      putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode) >> shell' mod' ctx'
+      where
+        (str, ctx') = runState (exec ast) ctx
+        mk_str evaluated bytecode =
+          "\n" ++ llvm_str ++ "\n" ++ cmd ++ "\n" ++ value
+          where
+            llvm_str =
+              case bytecode of
+                Just code -> "LLVM bytecode:\n" ++ code
+                Nothing   -> "Code generation failed"
+            value =
+              case evaluated of
+                Just val  -> str ++ " = " ++ val
+                Nothing   -> str
+
 
 main :: IO ()
 main = do
-{--
-  ast <- parseFile "tests/let.miniml" 
-  B.putStrLn $ encodePretty ast
-  ast <- parseFile "tests/if.miniml"
-  B.putStrLn $ encodePretty ast
-  ast <- parseFile "tests/fun.miniml"
-  B.putStrLn $ encodePretty ast
-  ast <- parseFile "tests/apply.miniml"
-  B.putStrLn $ encodePretty ast
-  ast <- parseFile "tests/bool.miniml"
-  B.putStrLn $ encodePretty ast
-  ast <- parseFile "tests/minus.miniml"
-  B.putStrLn $ encodePretty ast
---}
   shell

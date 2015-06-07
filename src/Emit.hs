@@ -131,16 +131,16 @@ cgen binary =
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
-codegen :: AST.Module -> S.ToplevelCmd -> IO AST.Module
+codegen :: AST.Module -> S.ToplevelCmd -> IO ((Maybe String), (Maybe String), AST.Module)
 codegen mod fns = do
   res <- runJIT oldast
   case res of
-    Right newast -> return $ fn newast
-    Left err     -> putStrLn err >> return oldast
+    Right (val, code, newast)   -> return $ (val, code, fn newast)
+    Left err                    -> putStrLn err >> return (Nothing, Nothing, oldast)
   where
     modn    = codegenTop fns
     oldast  = runLLVM mod modn
-    fn ast  =
+    fn ast  = do
       case fns of
         S.Expr _    -> mod -- don't save main() function
         otherwise   -> ast
