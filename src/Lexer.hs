@@ -18,21 +18,11 @@ import Syntax
 miniMLDef =
   emptyDef { Token.identStart      = letter
            , Token.identLetter     = letter
-           , Token.reservedNames   = [ "if"
-                                     , "then"
-                                     , "else"
-                                     , "true"
-                                     , "false"
-                                     , "int"
-                                     , "fun"
-                                     , "is"
+           , Token.reservedNames   = [ "if", "then", "else"
+                                     , "true", "false"
+                                     , "int", "fun", "is"
                                      ]
-           , Token.reservedOpNames = [ "+"
-                                     , "-"
-                                     , "*"
-                                     , "="
-                                     , "<"
-                                     ]
+           , Token.reservedOpNames = [ "+", "-", "*", "=", "<"]
            }
 
 lexer = Token.makeTokenParser miniMLDef
