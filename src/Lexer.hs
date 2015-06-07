@@ -20,7 +20,7 @@ miniMLDef =
            , Token.identLetter     = letter
            , Token.reservedNames   = [ "if", "then", "else"
                                      , "true", "false"
-                                     , "int", "fun", "is"
+                                     , "int", "fun", "is", "bool"
                                      ]
            , Token.reservedOpNames = [ "+", "-", "*", "=", "<"]
            }
