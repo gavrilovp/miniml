@@ -154,7 +154,7 @@ cgen binary =
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
-codegen :: AST.Module -> S.ToplevelCmd -> CodegenCtx -> IO ((Maybe String), (Maybe String), CodegenCtx, AST.Module)
+codegen :: GeneratorState -> S.ToplevelCmd -> CodegenCtx -> IO ((Maybe String), (Maybe String), CodegenCtx, GeneratorState)
 codegen mod fns ctx = do
   res <- runJIT oldast
   case res of

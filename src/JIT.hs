@@ -17,6 +17,7 @@ import LLVM.General.Transforms
 import LLVM.General.Analysis
 
 import qualified LLVM.General.ExecutionEngine as EE
+import qualified Codegen as C
 
 foreign import ccall "dynamic" haskFun :: FunPtr (IO Int) -> (IO Int)
 
@@ -34,16 +35,17 @@ jit c = EE.withMCJIT c optlevel model ptrelim fastins
 passes :: PassSetSpec
 passes = defaultCuratedPassSetSpec { optLevel = Just 3 }
 
-runJIT :: AST.Module -> IO (Either String ((Maybe String), (Maybe String), AST.Module))
+runJIT :: C.GeneratorState -> IO (Either String ((Maybe String), (Maybe String), C.GeneratorState))
 runJIT mod = do
   withContext $ \context ->
     jit context $ \executionEngine ->
-      runExceptT $ withModuleFromAST context mod $ \m ->
+      runExceptT $ withModuleFromAST context (C.modstate mod) $ \m ->
         withPassManager passes $ \pm -> do
           -- Optimization Pass
           runPassManager pm m
           optmod <- moduleAST m
           s <- moduleLLVMAssembly m
+          let opt_gen_state = mod { C.modstate = optmod }
 
           val <- EE.withModuleInEngine executionEngine m $ \ee -> do
             mainfn <- EE.getFunction ee (AST.Name "main")
@@ -55,5 +57,5 @@ runJIT mod = do
 
           -- Return the optimized module
           case val of
-            Just val -> return $ (Just (show val), (Just s), optmod)
-            Nothing  -> return (Nothing, (Just s), optmod)
+            Just val -> return $ (Just (show val), (Just s), opt_gen_state)
+            Nothing  -> return (Nothing, (Just s), opt_gen_state)

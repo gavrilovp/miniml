@@ -20,8 +20,8 @@ import Codegen
 
 import Debug.Trace
 
-initModule :: AST.Module
-initModule = emptyModule "MiniML"
+initModule :: GeneratorState
+initModule = emptyState "MiniML"
 
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do
@@ -48,7 +48,7 @@ shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
   shell' (initModule) emptyCtx
 
-shell' :: AST.Module -> CodegenCtx -> IO ()
+shell' :: GeneratorState -> CodegenCtx -> IO ()
 shell' mod ctx = do
   putStr "MiniML> "
   hFlush stdout

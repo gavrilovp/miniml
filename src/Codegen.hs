@@ -20,27 +20,40 @@ import qualified LLVM.General.AST.Attribute as A
 import qualified LLVM.General.AST.CallingConvention as CC
 import qualified LLVM.General.AST.IntegerPredicate as IP
 
+import Debug.Trace
+
 -------------------------------------------------------------------------------
 -- Module Level
 -------------------------------------------------------------------------------
 
-newtype LLVM a = LLVM { unLLVM :: State AST.Module a }
-  deriving (Functor, Applicative, Monad, MonadState AST.Module)
+type Vars = Map.Map String AST.Name
+data GeneratorState = GeneratorState {
+    modstate    :: AST.Module
+  , vars        :: Vars
+}
 
-runLLVM :: AST.Module -> LLVM a -> AST.Module
+newtype LLVM a = LLVM { unLLVM :: State GeneratorState a }
+  deriving (Functor, Applicative, Monad, MonadState GeneratorState)
+
+runLLVM :: GeneratorState -> LLVM a -> GeneratorState
 runLLVM = flip (execState . unLLVM)
 
-emptyModule :: String -> AST.Module
-emptyModule label = AST.defaultModule { AST.moduleName = label }
+emptyState :: String -> GeneratorState
+emptyState label = GeneratorState {
+    modstate = (AST.defaultModule { AST.moduleName = label })
+  , vars = Map.empty :: Vars
+}
 
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
-  defs <- gets AST.moduleDefinitions
-  modify $ \s -> s { AST.moduleDefinitions = defs ++ [d] }
+  st <- gets modstate
+  let defs = AST.moduleDefinitions st
+      m_state = st { AST.moduleDefinitions = defs ++ [d] }
+  modify $ \s -> s { modstate = m_state }
 
 define :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
 define retty label argtys body = addDefn $
-  AST.GlobalDefinition $ functionDefaults {
+  AST.GlobalDefinition $ functionDefaults { -- go to symbols table
     name        = AST.Name label
   , parameters  = ([AST.Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
@@ -89,7 +102,7 @@ uniqueName :: String -> Names -> (String, Names)
 uniqueName nm ns =
   case Map.lookup nm ns of
     Nothing -> (nm, Map.insert nm 1 ns)
-    Just ix -> (nm ++ show ix, Map.insert nm (ix+1) ns)
+    Just ix -> (nm ++ show ix, Map.insert nm (ix + 1) ns)
 
 instance IsString AST.Name where
   fromString = AST.Name . fromString
