@@ -55,7 +55,7 @@ genName l = do
         Nothing -> update 1
         Just (i, name) -> update (i + 1)
       where
-        new_name i = l ++ "_" ++ (show i)
+        new_name i = if i /= 1 then l ++ "_" ++ (show i) else l
         update i = Map.insert l (i, new_name i) vars_list
 
 findRealVarname :: String -> Vars -> String
@@ -63,6 +63,11 @@ findRealVarname name vars =
   case Map.lookup name vars of
     Just (_, n) -> n
     Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
+
+getName :: String -> LLVM String
+getName name = do
+  vars <- gets vars
+  return $ findRealVarname name vars
 
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
@@ -74,9 +79,9 @@ addDefn d = do
 define :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
 define retty label argtys body = do
   genName label
-  vars <- gets vars
+  name <- getName label
   addDefn $ AST.GlobalDefinition $ functionDefaults {
-    name        = AST.Name $ findRealVarname label vars
+    name        = AST.Name name
   , parameters  = ([AST.Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
   , basicBlocks = body
@@ -85,9 +90,9 @@ define retty label argtys body = do
 globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
 globalVar ty name value = do
   genName name
-  vars <- gets vars
+  real_name <- getName name
   addDefn $ AST.GlobalDefinition $ globalVariableDefaults {
-    name        = AST.Name $ findRealVarname name vars
+    name        = AST.Name real_name
   , type'       = ty
   , initializer = Just value
   }
@@ -182,7 +187,7 @@ fresh = do
   modify $ \s -> s { count = 1 + i }
   return $ i + 1
 
-instr :: AST.Instruction -> Codegen (AST.Operand)
+instr :: AST.Instruction -> Codegen AST.Operand
 instr ins = do
   n <- fresh
   let ref = (AST.UnName n)
