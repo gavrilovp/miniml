@@ -24,13 +24,11 @@ import qualified Syntax as S
 import Codegen
 import JIT
 
+import Debug.Trace
+
 -------------------------------------------------------------------------------
 -- Code generation
 -------------------------------------------------------------------------------
-
-toType :: S.Ty -> AST.Type
-toType S.TInt = int
-toType S.TBool = bool
 
 toSig :: (String, S.Ty) -> [(AST.Type, AST.Name)]
 toSig (name, t) = [((toType t), AST.Name name)]
@@ -48,25 +46,26 @@ genFun v (S.Fun name argname argtype rettype body) =
       assign argname var
       cgen v body >>= ret
 
-codegenTop :: Vars -> S.ToplevelCmd -> LLVM ()
-codegenTop globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
+codegenTop :: TC.Ctx -> Vars -> S.ToplevelCmd -> LLVM ()
+codegenTop _ _ a | trace (show a) False = undefined
+codegenTop _ globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   define (toType rettype) var_name var_args var_bls
   where
     (fnargs, bls) = genFun globVars (S.Fun name argname argtype rettype body)
     (var_args, var_bls) = genFun globVars (S.Fun var_name argname argtype rettype pseudo_body)
     pseudo_body = (S.Apply (S.Var name) (S.Var argname))
-codegenTop globVars (S.Def var_name expr) = do
-  globalVar ty var_name args bls
+codegenTop ctx globVars (S.Def var_name expr) = do
+  globalVar ty' var_name args bls
   where
-    ty' = S.TInt -- typeOf expr
-    ty = toType $ ty'
+    ty' = TC.typeOf ctx expr
     fname = var_name ++ "_fn"
-    (args, bls) = genFun globVars (S.Fun fname "_" ty' ty' expr)
+    (args, bls) = genFun globVars (S.Fun fname "_" S.TBool ty' expr)
 
-codegenTop globVars (S.Expr exp) = do
-  define int "main" [] blks
+codegenTop ctx globVars (S.Expr exp) = do
+  define ty "main" [] blks
   where
+    ty = toType $ TC.typeOf ctx exp
     blks = createBlocks $ execCodegen $ do
       entry <- addBlock entryBlockName
       setBlock entry
@@ -90,8 +89,8 @@ cgen _ (S.Bool False) = return $ cons $ C.Int 1 0
 cgen globVars (S.Var x) = do
   var <- getvar globVars x
   case var of
-    (Right v)           -> load v
-    (Left global_name)  -> cgen globVars (S.Apply (S.Var global_name) (S.Int 0))
+    (Right v) -> load v
+    (Left (global_name, ty)) -> cgen globVars (S.Apply (S.Var global_name) (S.Bool False))
 
 cgen globVars (S.Apply (S.Var fn) arg) = do
   larg <- cgen globVars arg
@@ -146,7 +145,7 @@ codegen mod fns ctx = do
     Right (val, code, newast)   -> return $ (val, code, fn newast)
     Left err                    -> putStrLn err >> return (Nothing, Nothing, oldast)
   where
-    modn    = codegenTop (vars mod) fns
+    modn    = codegenTop ctx (vars mod) fns
     oldast  = runLLVM mod modn
     fn ast  = do
       case fns of

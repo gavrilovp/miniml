@@ -8,6 +8,7 @@ import Data.String
 import Data.List
 import Data.Function
 import qualified Data.Map as Map
+import qualified Syntax as S
 
 import Control.Monad.State
 import Control.Applicative
@@ -24,7 +25,7 @@ import qualified LLVM.General.AST.IntegerPredicate as IP
 -- Module Level
 -------------------------------------------------------------------------------
 
-type Vars = Map.Map String (Int, String)
+type Vars = Map.Map String (Int, String, S.Ty)
 data GeneratorState = GeneratorState {
     modstate    :: AST.Module
   , vars        :: Vars
@@ -36,16 +37,18 @@ newtype LLVM a = LLVM { unLLVM :: State GeneratorState a }
 runLLVM :: GeneratorState -> LLVM a -> GeneratorState
 runLLVM = flip (execState . unLLVM)
 
+toType :: S.Ty -> AST.Type
+toType S.TInt = int
+toType S.TBool = bool
+
 emptyState :: String -> GeneratorState
 emptyState label = GeneratorState {
     modstate = (AST.defaultModule { AST.moduleName = label })
   , vars = Map.empty :: Vars
 }
 
-_global = "_global"
-
-genGlobalName :: String -> LLVM String
-genGlobalName l = do
+genGlobalName :: String -> S.Ty -> LLVM String
+genGlobalName l ty = do
   vars_list <- gets vars
   let (new_vars, name) = getName_impl vars_list
   modify $ \s -> s { vars = new_vars }
@@ -54,16 +57,16 @@ genGlobalName l = do
     getName_impl vars_list =
       case Map.lookup l vars_list of
         Nothing -> ((update 1), (new_name 1))
-        Just (i, name) -> ((update (i + 1)), (new_name (i + 1)))
+        Just (i, name, _) -> ((update (i + 1)), (new_name (i + 1)))
       where
-        new_name i = (if i /= 1 then l ++ "_" ++ (show i) else l) ++ _global
-        update i = Map.insert l (i, new_name i) vars_list
+        new_name i = (if i /= 1 then l ++ "_" ++ (show i) else l) ++ "_global"
+        update i = Map.insert l (i, (new_name i), ty) vars_list
 
-getGlobalVar :: String -> Vars -> String
+getGlobalVar :: String -> Vars -> (String, S.Ty)
 getGlobalVar name vars =
   case Map.lookup name vars of
-    Just (_, n) -> n
-    Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
+    Just (_, n, ty) -> (n, ty)
+    Nothing         -> error $ "Variable '" ++ name ++ "' not found in scope"
 
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
@@ -81,10 +84,10 @@ define retty label argtys body = do
   , basicBlocks = body
   }
 
-globalVar :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
+globalVar :: S.Ty -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
 globalVar ty name args block = do
-  real_name <- genGlobalName name
-  define ty real_name args block
+  real_name <- genGlobalName name ty
+  define (toType ty) real_name args block
 
 ---------------------------------------------------------------------------------
 -- Types
@@ -241,7 +244,7 @@ assign var x = do
   lcls <- gets symtab
   modify $ \s -> s { symtab = [(var, x)] ++ lcls }
 
-getvar :: Vars -> String -> Codegen (Either String AST.Operand)
+getvar :: Vars -> String -> Codegen (Either (String, S.Ty) AST.Operand)
 getvar globVars varname = do
   syms <- gets symtab
   case lookup varname syms of
