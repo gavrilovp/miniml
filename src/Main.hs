@@ -4,6 +4,7 @@ module Main
 
 import Control.Monad
 import Control.Monad.State
+import Control.DeepSeq
 import System.IO
 import Text.ParserCombinators.Parsec hiding (State)
 import Data.Aeson.Encode.Pretty
@@ -54,7 +55,7 @@ shell' mod ctx = do
   case parse toplevelCmdP "" cmd of
     Left e -> print e >> shell' mod ctx
     Right ast -> do
-      (evaluated, bytecode, mod') <- codegen mod ast ctx'
+      (evaluated, bytecode, mod') <- str `deepseq` codegen mod ast ctx'
       putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode)
       shell' mod' ctx'
       where
