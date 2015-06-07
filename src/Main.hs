@@ -18,8 +18,6 @@ import TypeCheck
 import Emit
 import Codegen
 
-import Debug.Trace
-
 initModule :: GeneratorState
 initModule = emptyState "MiniML"
 

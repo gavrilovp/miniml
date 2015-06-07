@@ -20,8 +20,6 @@ import qualified LLVM.General.AST.Attribute as A
 import qualified LLVM.General.AST.CallingConvention as CC
 import qualified LLVM.General.AST.IntegerPredicate as IP
 
-import Debug.Trace
-
 -------------------------------------------------------------------------------
 -- Module Level
 -------------------------------------------------------------------------------

@@ -24,8 +24,6 @@ import qualified Syntax as S
 import Codegen
 import JIT
 
-import Debug.Trace
-
 -------------------------------------------------------------------------------
 -- Code generation
 -------------------------------------------------------------------------------
@@ -59,8 +57,6 @@ codegenTop globVars (S.Def var_name (S.Fun name argname argtype rettype body)) =
     (var_args, var_bls) = genFun globVars (S.Fun var_name argname argtype rettype pseudo_body)
     pseudo_body = (S.Apply (S.Var name) (S.Var argname))
 codegenTop globVars (S.Def var_name expr) = do
-  --define ty fname fnargs bls
-  traceM $ "NAME" ++ var_name
   globalVar ty var_name args bls
   where
     ty' = S.TInt -- typeOf expr
