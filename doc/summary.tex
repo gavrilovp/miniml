@@ -22,6 +22,33 @@
 \usepackage{enumitem} % for unboxed description labels (long ones)
 \usepackage{caption}
 
+\lstloadlanguages{C,haskell,bash,java}
+
+\lstset{
+    frame=none,
+    xleftmargin=2pt,
+    stepnumber=1,
+    numbers=left,
+    numbersep=5pt,
+    numberstyle=\ttfamily\tiny\color[gray]{0.3},
+    belowcaptionskip=\bigskipamount,
+    captionpos=b,
+    escapeinside={*'}{'*},
+    language=haskell,
+    tabsize=2,
+    emphstyle={\bf},
+    commentstyle=\it,
+    stringstyle=\mdseries\rmfamily,
+    showspaces=false,
+    keywordstyle=\bfseries\rmfamily,
+    columns=flexible,
+    basicstyle=\small\sffamily,
+    showstringspaces=false,
+    morecomment=[l]\%,
+    breaklines=true
+}
+\renewcommand\lstlistingname{Листинг}
+
 \defaultfontfeatures{Mapping=tex-text} % for converting "--" and "---"
 \setmainfont{CMU Serif}
 \setsansfont{CMU Sans Serif}
@@ -76,7 +103,34 @@ Haskell. Такое решение было принято из-за следу�
 использовалась библиотека aeson \cite{aeson}.
 
 \section{Описание языка}
-Описание языка.
+Граматика языка имеет следующий вид:
+
+\begin{lstlisting}[language=haskell]
+-- Variable names
+type Name = String
+
+-- Types
+data Ty = TInt         -- integers
+        | TBool        -- booleans
+        | TArrow Ty Ty -- functions
+
+-- Expressions
+data Expr = Var Name
+          | Int Integer
+          | Bool Bool
+          | Times Expr Expr
+          | Plus Expr Expr
+          | Minus Expr Expr
+          | Equal Expr Expr
+          | Less Expr Expr
+          | If Expr Expr Expr
+          | Fun Name Name Ty Ty Expr
+          | Apply Expr Expr
+
+-- Toplevel commands
+data ToplevelCmd = Expr Expr
+                 | Def Name Expr
+\end{lstlisting}
 
 \section{Список литературы}
 \printbibliography[heading=none]
