@@ -44,16 +44,17 @@ emptyState label = GeneratorState {
   , vars = Map.empty :: Vars
 }
 
-genName :: String -> LLVM ()
+genName :: String -> LLVM String
 genName l = do
   vars_list <- gets vars
-  let new_vars = getName_impl vars_list
+  let (new_vars, name) = getName_impl vars_list
   modify $ \s -> s { vars = new_vars }
+  return name
   where
     getName_impl vars_list =
       case Map.lookup l vars_list of
-        Nothing -> update 1
-        Just (i, name) -> update (i + 1)
+        Nothing -> ((update 1), (new_name 1))
+        Just (i, name) -> ((update (i + 1)), (new_name (i + 1)))
       where
         new_name i = if i /= 1 then l ++ "_" ++ (show i) else l
         update i = Map.insert l (i, new_name i) vars_list
@@ -64,11 +65,6 @@ findRealVarname name vars =
     Just (_, n) -> n
     Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
 
-getName :: String -> LLVM String
-getName name = do
-  vars <- gets vars
-  return $ findRealVarname name vars
-
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
   st <- gets modstate
@@ -78,10 +74,8 @@ addDefn d = do
 
 define :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
 define retty label argtys body = do
-  genName label
-  name <- getName label
   addDefn $ AST.GlobalDefinition $ functionDefaults {
-    name        = AST.Name name
+    name        = AST.Name label
   , parameters  = ([AST.Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
   , basicBlocks = body
@@ -89,8 +83,7 @@ define retty label argtys body = do
 
 globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
 globalVar ty name value = do
-  genName name
-  real_name <- getName name
+  real_name <- genName name
   addDefn $ AST.GlobalDefinition $ globalVariableDefaults {
     name        = AST.Name real_name
   , type'       = ty
@@ -252,12 +245,14 @@ assign var x = do
   lcls <- gets symtab
   modify $ \s -> s { symtab = [(var, x)] ++ lcls }
 
-getvar :: String -> Codegen AST.Operand
-getvar var = do
+getvar :: Vars -> String -> Codegen AST.Operand
+getvar globVars varname = do
   syms <- gets symtab
-  case lookup var syms of
+  case lookup varname syms of
     Just x  -> return x
-    Nothing -> error $ "Local variable not in scope: " ++ show var
+    Nothing -> return $ global (AST.Name gvar)
+  where
+    gvar = findRealVarname varname globVars
 
 -------------------------------------------------------------------------------
 
@@ -265,8 +260,8 @@ getvar var = do
 local :: AST.Name -> AST.Operand
 local = AST.LocalReference int
 
-global :: AST.Name -> C.Constant
-global = C.GlobalReference int
+global :: AST.Name -> AST.Operand
+global n = AST.ConstantOperand $ C.GlobalReference int n
 
 externf :: AST.Type -> AST.Name -> AST.Operand
 externf ty = AST.ConstantOperand . C.GlobalReference ty

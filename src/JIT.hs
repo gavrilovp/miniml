@@ -19,6 +19,8 @@ import LLVM.General.Analysis
 import qualified LLVM.General.ExecutionEngine as EE
 import qualified Codegen as C
 
+import Debug.Trace
+
 foreign import ccall "dynamic" haskFun :: FunPtr (IO Int) -> (IO Int)
 
 run :: FunPtr a -> IO Int
