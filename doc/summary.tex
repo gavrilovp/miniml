@@ -1,0 +1,247 @@
+\documentclass[a4paper,12pt]{article}
+
+% polyglossia should go first!
+\usepackage{polyglossia} % multi-language support
+\setmainlanguage{russian}
+\setotherlanguage{english}
+
+\usepackage{amsmath} % math symbols, new environments and stuff
+\usepackage{unicode-math} % for changing math font and unicode symbols
+\usepackage[style=english]{csquotes} % fancy quoting
+\usepackage{microtype} % for better font rendering
+\usepackage{hyperref} % for refs and URLs
+\usepackage{graphicx} % for images (and title page)
+\usepackage{geometry} % for margins in title page
+\usepackage{tabu} % for tabulars (and title page)
+\usepackage[backend=bibtex, style=numeric-comp, sorting=none]{biblatex} % for bibliography
+\usepackage{placeins} % for float barriers
+\usepackage{titlesec} % for section break hooks
+\usepackage{listings} % for listings 
+\usepackage{upquote} % for good-looking quotes in source code (used for custom languages)
+\usepackage{xcolor} % colors!
+\usepackage{enumitem} % for unboxed description labels (long ones)
+\usepackage{caption}
+
+\lstloadlanguages{C,haskell,bash,java}
+
+\lstset{
+    frame=none,
+    xleftmargin=2pt,
+    stepnumber=1,
+    numbers=left,
+    numbersep=5pt,
+    numberstyle=\ttfamily\tiny\color[gray]{0.3},
+    belowcaptionskip=\bigskipamount,
+    captionpos=b,
+    escapeinside={*'}{'*},
+    language=haskell,
+    tabsize=2,
+    emphstyle={\bf},
+    commentstyle=\it,
+    stringstyle=\mdseries\rmfamily,
+    showspaces=false,
+    keywordstyle=\bfseries\rmfamily,
+    columns=flexible,
+    basicstyle=\small\sffamily,
+    showstringspaces=false,
+    morecomment=[l]\%,
+    breaklines=true
+}
+\renewcommand\lstlistingname{Листинг}
+
+\defaultfontfeatures{Mapping=tex-text} % for converting "--" and "---"
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{CMU Typewriter Text}
+\setmathfont{XITS Math}
+\MakeOuterQuote{"} % enable auto-quotation
+
+% new page and barrier after section, also phantom section after clearpage for
+% hyperref to get right page.
+% clearpage also outputs all active floats:
+\newcommand{\sectionbreak}{\clearpage\phantomsection}
+\newcommand{\subsectionbreak}{\FloatBarrier}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\renewcommand{\thesection}{\arabic{section}} % no chapters
+\numberwithin{equation}{section}
+%\usetikzlibrary{shapes,arrows,trees}
+
+% 20 - 25 стр достаточно
+
+\bibliography{reference_list}
+
+\begin{document}
+
+\tableofcontents
+
+\section{Введение}
+В настоящей работе в рамках курса <<конструирование компиляторов>>
+реализуется фронтенд компилятора MiniML. В записке приводятся
+использованная грамматика языка, описания лексического,
+синтаксического, семантического анализаторов. Кратко описан поиск
+лексических, синтаксических и семантических ошибок, таких как
+несогласованность типов. Результатом курсовой работы является ПО,
+которое при удачном лексическом, синтаксическом и семантическом
+разборах создаёт абстрактное синтаксическое дерево, соответствующее
+тексту исходной программы.
+
+\section{Выбор платформы} 
+Для реализации фронтенда компилятора было решено использова язык
+Haskell. Такое решение было принято из-за следующих преимуществ языка:
+\begin{enumerate}
+\item статическая, сильная типизация;
+\item автоматический вывод типов, основанный на алгоритме Хиндли -- Милнера;
+\item ленивые вычисления;
+\item удобство написания парсеров.
+\end{enumerate}
+Был использован компилятор GHC 7.10.1 \cite{ghc}, система сборки и управления
+пакетами и библиотеками языка Haskell Cabal 1.22.4.0 \cite{cabal}.
+
+
+Для написания лексического и синтаксического анализаторов использовалась
+библиотека parsec \cite{parsec}. Для сериализации AST в JSON-формат
+использовалась библиотека aeson \cite{aeson}.
+
+\section{Описание языка}
+Язык имеет следующие конструкции:
+\begin{enumerate}
+\item Беззнаковые целые числа и определённые над ними операции: +, - и *.
+\item Логический тип (true, false), условные выражения и сравнение
+  целых чисел (только = и <).
+\item Рекурсивные функции и применение функций. Выражение 
+  fun f (x : t) : s is e обозначает функцию типа t -> s, в которой
+  инструкциям в e доступен x.
+\item Высокоуровневые объявления: let x = e. Локальных объявлений нет.
+\end{enumerate}
+
+\section{Лексический анализ}
+\subsection{Входные и выходные типы данных}
+На этапе лексического анализа происходит преобразование входной строки
+в последовательность токенов. Токеном может быть: идентификатор, оператор,
+разезервированное слово, константа типа unsigned int или bool.
+
+\subsection{Обнаруживаемые ошибки}
+Единственные ошибки, обнаруживаемые фронтендом компилятора на этапе
+лексического анализа, вызываются наличием в исходном коде компилируемой
+программы недостимых символов. К примеру, такую ошибку вызовет встреченный
+анализатором в любом месте программы символ \%.
+
+
+Ошибки на этапе лексического анализа являются критическими: при возникновении
+ошибки работа фронтенда немедленно завершается выводом сообщения, содержащего
+позицию ошибки и подсказку о возможных способах её исправления.
+
+\begin{lstlisting}[ language=haskell
+                  , caption=Сообщение о лексической ошибке
+                  , label=lst:lexical_error]
+MiniML> let asd%dsa = 2
+(line 1, column 8):
+unexpected "%"
+expecting letter or "="MiniML> let asd%dsa = 2
+(line 1, column 8):
+unexpected "%"
+expecting letter or "="
+\end{lstlisting}
+
+Пример сообщения об ошибке, вызываемой наличием символа, который не
+допускает грамматика языка, в исходном коде программы \ref{lst:lexical_error}.
+
+\subsection{Реализация лексического анализатора}
+Лексический анализатор был реализован с помощью библиотеки parsec,
+которая позволяет с помощью комбинаторов из простых парсеров собирать
+более сложные.
+
+
+Исходный код лексического анализатора представлен в приложении 1.
+
+\section{Синтаксический анализ}
+\subsection{Входные и выходные типы данных}
+На этапе синтаксического анализа происходит преобразование
+последовательности токенов, сгенерированной лексическим анализатором,
+в абстрактное синтаксическое дерево.
+
+
+Описание выходные типов парсера представлено в листинге \ref{lst:parser}. 
+Корнем дерева является команда высшего уровня ToplevelCmd.
+
+\begin{lstlisting}[ language=haskell
+                  , caption=Выходные типы данных парсера
+                  , label=lst:parser]
+-- Variable names
+type Name = String
+
+-- Types
+data Ty = TInt         -- integers
+        | TBool        -- booleans
+        | TArrow Ty Ty -- functions
+
+-- Expressions
+data Expr = Var Name
+          | Int Integer
+          | Bool Bool
+          | Times Expr Expr
+          | Plus Expr Expr
+          | Minus Expr Expr
+          | Equal Expr Expr
+          | Less Expr Expr
+          | If Expr Expr Expr
+          | Fun Name Name Ty Ty Expr
+          | Apply Expr Expr
+
+-- Toplevel commands
+data ToplevelCmd = Expr Expr
+                 | Def Name Expr
+\end{lstlisting}
+
+\subsection{Обнаруживаемые ошибки}
+На данном этапе обнаруживаются ошибки несоответствия исходного кода
+грамматике языка. Ошибки данного типа также являются критическими,
+хотя более сложные парсеры могут восстанавливаться после ошибок.
+
+
+При возникновении ошибки работа фронтенда немедленно завершается
+выводом сообщения об ошибке, содержащего позицию ошибки и подсказку о
+возможных способах её устранения.
+
+
+Примеры сообщений об ошибках представлены в листинге \ref{lst:syntax_errors}.
+
+\begin{lstlisting}[ language=haskell
+                  , caption=Сообщения о синтаксической ошибке
+                  , label=lst:syntax_errors]
+MiniML> let x = (
+(line 1, column 10):
+unexpected end of input
+expecting "(", "fun", natural, identifier, "if", "true" or "false"
+
+MiniML> ((23 + 3) 
+(line 1, column 10):
+unexpected end of input
+expecting ")"
+
+MiniML> let a = + 2
+(line 1, column 9):
+unexpected "+"
+expecting "(", "fun", natural, identifier, "if", "true" or "false"
+\end{lstlisting}
+
+\subsection{Реализация парсера}
+Парсер был реализован с помощью библиотеки parsec. Реализация находится
+в приложении 2.
+
+\section{Список литературы}
+\printbibliography[heading=none]
+
+\section*{\titleline[r]{Приложение 1}} 
+\addcontentsline{toc}{section}{Приложение 1}
+\subsection*{Исходный код лексического анализатора}
+\lstinputlisting{../src/Lexer.hs}
+\clearpage
+
+\section*{\titleline[r]{Приложение 2}} 
+\addcontentsline{toc}{section}{Приложение 2}
+\subsection*{Исходный код синтаксического анализатора}
+\lstinputlisting{../src/Parser.hs}
+\clearpage
+
+\end{document}
