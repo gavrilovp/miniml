@@ -9,7 +9,7 @@ import Text.ParserCombinators.Parsec hiding (State)
 import Data.Aeson.Encode.Pretty
 import qualified Data.Map as M
 import qualified LLVM.General.AST as AST
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as B
 
 import Syntax
 import Lexer
@@ -46,9 +46,9 @@ exec (Expr e) = do
 shell :: IO ()
 shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
-  shell' (initModule) (M.empty :: Ctx)
+  shell' (initModule) emptyCtx
 
-shell' :: AST.Module -> Ctx -> IO ()
+shell' :: AST.Module -> CodegenCtx -> IO ()
 shell' mod ctx = do
   putStr "MiniML> "
   hFlush stdout
@@ -56,10 +56,11 @@ shell' mod ctx = do
   case parse toplevelCmdP "" cmd of
     Left e -> print e >> shell' mod ctx
     Right ast -> do
-      (evaluated, bytecode, mod') <- codegen mod ast
-      putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode) >> shell' mod' ctx'
+      (evaluated, bytecode, new_context, mod') <- codegen mod ast ctx'
+      putStrLn "AST: " >> (B.putStrLn $ encodePretty ast) >> putStrLn (mk_str evaluated bytecode) >> shell' mod' new_context
       where
-        (str, ctx') = runState (exec ast) ctx
+        ctx' = CodegenCtx { typeContext = local_ctx, varContext = (varContext ctx) }
+        (str, local_ctx) = runState (exec ast) (typeContext ctx')
         mk_str evaluated bytecode =
           "\n" ++ llvm_str ++ "\n" ++ cmd ++ "\n" ++ value
           where

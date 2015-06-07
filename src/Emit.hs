@@ -17,12 +17,35 @@ import Data.Int
 import Control.Monad.Except
 import Control.Applicative
 import qualified Data.Map as Map
+import qualified TypeCheck as TC
 
 import qualified Syntax as S
 import Codegen
 import JIT
 
-import Debug.Trace
+-------------------------------------------------------------------------------
+-- Contexts
+-------------------------------------------------------------------------------
+
+type VarCtx = Map.Map String AST.Name
+data CodegenCtx
+  = CodegenCtx {
+    typeContext  :: TC.Ctx
+  , varContext   :: VarCtx
+  }
+
+varType :: CodegenCtx -> S.Expr -> S.Ty
+varType ctx expr = TC.typeOf (typeContext ctx) expr
+
+emptyCtx :: CodegenCtx
+emptyCtx = CodegenCtx {
+    typeContext = Map.empty :: TC.Ctx
+  , varContext  = Map.empty :: VarCtx
+}
+
+-------------------------------------------------------------------------------
+-- Code generation
+-------------------------------------------------------------------------------
 
 toType :: S.Ty -> AST.Type
 toType S.TInt = int
@@ -131,12 +154,12 @@ cgen binary =
 liftError :: ExceptT String IO a -> IO a
 liftError = runExceptT >=> either fail return
 
-codegen :: AST.Module -> S.ToplevelCmd -> IO ((Maybe String), (Maybe String), AST.Module)
-codegen mod fns = do
+codegen :: AST.Module -> S.ToplevelCmd -> CodegenCtx -> IO ((Maybe String), (Maybe String), CodegenCtx, AST.Module)
+codegen mod fns ctx = do
   res <- runJIT oldast
   case res of
-    Right (val, code, newast)   -> return $ (val, code, fn newast)
-    Left err                    -> putStrLn err >> return (Nothing, Nothing, oldast)
+    Right (val, code, newast)   -> return $ (val, code, ctx, fn newast)
+    Left err                    -> putStrLn err >> return (Nothing, Nothing, ctx, oldast)
   where
     modn    = codegenTop fns
     oldast  = runLLVM mod modn
