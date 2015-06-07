@@ -26,7 +26,7 @@ import Debug.Trace
 -- Module Level
 -------------------------------------------------------------------------------
 
-type Vars = Map.Map String AST.Name
+type Vars = Map.Map String (Int, String)
 data GeneratorState = GeneratorState {
     modstate    :: AST.Module
   , vars        :: Vars
@@ -44,6 +44,26 @@ emptyState label = GeneratorState {
   , vars = Map.empty :: Vars
 }
 
+genName :: String -> LLVM ()
+genName l = do
+  vars_list <- gets vars
+  let new_vars = getName_impl vars_list
+  modify $ \s -> s { vars = new_vars }
+  where
+    getName_impl vars_list =
+      case Map.lookup l vars_list of
+        Nothing -> update 1
+        Just (i, name) -> update (i + 1)
+      where
+        new_name i = l ++ "_" ++ (show i)
+        update i = Map.insert l (i, new_name i) vars_list
+
+findRealVarname :: String -> Vars -> String
+findRealVarname name vars =
+  case Map.lookup name vars of
+    Just (_, n) -> n
+    Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
+
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
   st <- gets modstate
@@ -52,29 +72,24 @@ addDefn d = do
   modify $ \s -> s { modstate = m_state }
 
 define :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
-define retty label argtys body = addDefn $
-  AST.GlobalDefinition $ functionDefaults { -- go to symbols table
-    name        = AST.Name label
+define retty label argtys body = do
+  genName label
+  vars <- gets vars
+  addDefn $ AST.GlobalDefinition $ functionDefaults {
+    name        = AST.Name $ findRealVarname label vars
   , parameters  = ([AST.Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
   , basicBlocks = body
   }
 
 globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
-globalVar ty name value = addDefn $
-  AST.GlobalDefinition $ globalVariableDefaults {
-    name        = AST.Name name
+globalVar ty name value = do
+  genName name
+  vars <- gets vars
+  addDefn $ AST.GlobalDefinition $ globalVariableDefaults {
+    name        = AST.Name $ findRealVarname name vars
   , type'       = ty
   , initializer = Just value
-  }
-
-external :: AST.Type -> String -> [(AST.Type, AST.Name)] -> LLVM ()
-external retty label argtys = addDefn $
-  AST.GlobalDefinition $ functionDefaults {
-    name        = AST.Name label
-  , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
-  , returnType  = retty
-  , basicBlocks = []
   }
 
 ---------------------------------------------------------------------------------
