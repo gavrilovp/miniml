@@ -68,7 +68,7 @@ shell' mod ctx = do
                 Nothing   -> "Code generation failed"
             value =
               case evaluated of
-                Just val  -> str ++ " = " ++ val
+                Just val  -> str ++ " = " ++ id val
                 Nothing   -> str
 
 

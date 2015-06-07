@@ -49,21 +49,24 @@ codegenTop :: TC.Ctx -> Vars -> S.ToplevelCmd -> LLVM ()
 codegenTop _ globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   define (toType rettype) var_name var_args var_bls
+  modify $ \s -> s { ty = rettype }
   where
     (fnargs, bls) = genFun globVars (S.Fun name argname argtype rettype body)
     (var_args, var_bls) = genFun globVars (S.Fun var_name argname argtype rettype pseudo_body)
     pseudo_body = (S.Apply (S.Var name) (S.Var argname))
 codegenTop ctx globVars (S.Def var_name expr) = do
   globalVar ty' var_name args bls
+  modify $ \s -> s { ty = ty' }
   where
     ty' = TC.typeOf ctx expr
     fname = var_name ++ "_fn"
     (args, bls) = genFun globVars (S.Fun fname "_" S.TBool ty' expr)
 
 codegenTop ctx globVars (S.Expr exp) = do
-  define ty "main" [] blks
+  define (toType ty) "main" [] blks
+  modify $ \s -> s { ty = ty }
   where
-    ty = toType $ TC.typeOf ctx exp
+    ty = TC.typeOf ctx exp
     blks = createBlocks $ execCodegen $ do
       entry <- addBlock entryBlockName
       setBlock entry

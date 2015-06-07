@@ -18,6 +18,9 @@ import LLVM.General.Analysis
 
 import qualified LLVM.General.ExecutionEngine as EE
 import qualified Codegen as C
+import qualified Syntax as S
+
+import Data.Bits
 
 foreign import ccall "dynamic" haskFun :: FunPtr (IO Int32) -> (IO Int32)
 
@@ -34,6 +37,10 @@ jit c = EE.withMCJIT c optlevel model ptrelim fastins
 
 passes :: PassSetSpec
 passes = defaultCuratedPassSetSpec { optLevel = Just 3 }
+
+convertVal :: Int32 -> S.Ty -> String
+convertVal v S.TInt = show v
+convertVal v S.TBool = if v .&. 1 == 1 then "true" else "false"
 
 runJIT :: C.GeneratorState -> IO (Either String ((Maybe String), (Maybe String), C.GeneratorState))
 runJIT mod = do
@@ -52,10 +59,10 @@ runJIT mod = do
             case mainfn of
               Just fn -> do
                 res <- run fn
-                return $ Just res
+                return $ Just $ convertVal res (C.ty mod)
               Nothing -> return Nothing
 
           -- Return the optimized module
           case val of
-            Just val -> return $ (Just (show val), (Just s), opt_gen_state)
+            Just val -> return $ ((Just val), (Just s), opt_gen_state)
             Nothing  -> return (Nothing, (Just s), opt_gen_state)
