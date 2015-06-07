@@ -1,0 +1,84 @@
+\documentclass[a4paper,12pt]{article}
+
+% polyglossia should go first!
+\usepackage{polyglossia} % multi-language support
+\setmainlanguage{russian}
+\setotherlanguage{english}
+
+\usepackage{amsmath} % math symbols, new environments and stuff
+\usepackage{unicode-math} % for changing math font and unicode symbols
+\usepackage[style=english]{csquotes} % fancy quoting
+\usepackage{microtype} % for better font rendering
+\usepackage{hyperref} % for refs and URLs
+\usepackage{graphicx} % for images (and title page)
+\usepackage{geometry} % for margins in title page
+\usepackage{tabu} % for tabulars (and title page)
+\usepackage[backend=bibtex, style=numeric-comp, sorting=none]{biblatex} % for bibliography
+\usepackage{placeins} % for float barriers
+\usepackage{titlesec} % for section break hooks
+\usepackage{listings} % for listings 
+\usepackage{upquote} % for good-looking quotes in source code (used for custom languages)
+\usepackage{xcolor} % colors!
+\usepackage{enumitem} % for unboxed description labels (long ones)
+\usepackage{caption}
+
+\defaultfontfeatures{Mapping=tex-text} % for converting "--" and "---"
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{CMU Typewriter Text}
+\setmathfont{XITS Math}
+\MakeOuterQuote{"} % enable auto-quotation
+
+% new page and barrier after section, also phantom section after clearpage for
+% hyperref to get right page.
+% clearpage also outputs all active floats:
+\newcommand{\sectionbreak}{\clearpage\phantomsection}
+\newcommand{\subsectionbreak}{\FloatBarrier}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\renewcommand{\thesection}{\arabic{section}} % no chapters
+\numberwithin{equation}{section}
+%\usetikzlibrary{shapes,arrows,trees}
+
+% 20 - 25 стр достаточно
+
+\bibliography{reference_list}
+
+\begin{document}
+
+\tableofcontents
+
+\section{Введение}
+В настоящей работе в рамках курса <<конструирование компиляторов>>
+реализуется фронтенд компилятора MiniML. В записке приводятся
+использованная грамматика языка, описания лексического,
+синтаксического, семантического анализаторов. Кратко описан поиск
+лексических, синтаксических и семантических ошибок, таких как
+несогласованность типов. Результатом курсовой работы является ПО,
+которое при удачном лексическом, синтаксическом и семантическом
+разборах создаёт абстрактное синтаксическое дерево, соответствующее
+тексту исходной программы.
+
+\section{Выбор платформы} 
+Для реализации фронтенда компилятора было решено использова язык
+Haskell. Такое решение было принято из-за следующих преимуществ языка:
+\begin{enumerate}
+\item статическая, сильная типизация;
+\item автоматический вывод типов, основанный на алгоритме Хиндли -- Милнера;
+\item ленивые вычисления;
+\item удобство написания парсеров.
+\end{enumerate}
+Был использован компилятор GHC 7.10.1 \cite{ghc}, система сборки и управления
+пакетами и библиотеками языка Haskell Cabal 1.22.4.0 \cite{cabal}.
+
+
+Для написания лексического и синтаксического анализаторов использовалась
+библиотека parsec \cite{parsec}. Для сериализации AST в JSON-формат
+использовалась библиотека aeson \cite{aeson}.
+
+\section{Описание языка}
+Описание языка.
+
+\section{Список литературы}
+\printbibliography[heading=none]
+
+\end{document}
