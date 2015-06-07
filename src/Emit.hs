@@ -24,6 +24,7 @@ import qualified Syntax as S
 import Codegen
 import JIT
 
+import Debug.Trace
 
 -------------------------------------------------------------------------------
 -- Code generation
@@ -46,6 +47,7 @@ genFun v (S.Fun name argname argtype rettype body) =
       cgen v body >>= ret
 
 codegenTop :: TC.Ctx -> Vars -> S.ToplevelCmd -> LLVM ()
+codegenTop _ _ c | trace (show c) False = undefined
 codegenTop _ globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   define (toType rettype) var_name var_args var_bls
@@ -61,7 +63,12 @@ codegenTop ctx globVars (S.Def var_name expr) = do
     ty' = TC.typeOf ctx expr
     fname = var_name ++ "_fn"
     (args, bls) = genFun globVars (S.Fun fname "_" S.TBool ty' expr)
-
+codegenTop ctx globVars (S.Expr (S.Fun name argname argtype rettype body)) = do
+  define (toType rettype) name fnargs bls
+  modify $ \s -> s { ty = rettype }
+  where
+    (fnargs, bls) = genFun globVars (S.Fun name argname argtype rettype body)
+    pseudo_body = (S.Apply (S.Var name) (S.Var argname))
 codegenTop ctx globVars (S.Expr exp) = do
   define (toType ty) "main" [] blks
   modify $ \s -> s { ty = ty }
