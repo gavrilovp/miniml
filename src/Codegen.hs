@@ -44,8 +44,10 @@ emptyState label = GeneratorState {
   , vars = Map.empty :: Vars
 }
 
-genName :: String -> LLVM String
-genName l = do
+_global = "_global"
+
+genGlobalName :: String -> LLVM String
+genGlobalName l = do
   vars_list <- gets vars
   let (new_vars, name) = getName_impl vars_list
   modify $ \s -> s { vars = new_vars }
@@ -56,13 +58,13 @@ genName l = do
         Nothing -> ((update 1), (new_name 1))
         Just (i, name) -> ((update (i + 1)), (new_name (i + 1)))
       where
-        new_name i = if i /= 1 then l ++ "_" ++ (show i) else l
+        new_name i = (if i /= 1 then l ++ "_" ++ (show i) else l) ++ _global
         update i = Map.insert l (i, new_name i) vars_list
 
-findRealVarname :: String -> Vars -> String
-findRealVarname name vars =
+getGlobalVar :: String -> Vars -> AST.Operand
+getGlobalVar name vars =
   case Map.lookup name vars of
-    Just (_, n) -> n
+    Just (_, n) -> externf int (AST.Name n)
     Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
 
 addDefn :: AST.Definition -> LLVM ()
@@ -81,14 +83,10 @@ define retty label argtys body = do
   , basicBlocks = body
   }
 
-globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
-globalVar ty name value = do
-  real_name <- genName name
-  addDefn $ AST.GlobalDefinition $ globalVariableDefaults {
-    name        = AST.Name real_name
-  , type'       = ty
-  , initializer = Just value
-  }
+globalVar :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
+globalVar ty name args block = do
+  real_name <- genGlobalName name
+  define ty real_name args block
 
 ---------------------------------------------------------------------------------
 -- Types
@@ -250,9 +248,9 @@ getvar globVars varname = do
   syms <- gets symtab
   case lookup varname syms of
     Just x  -> return x
-    Nothing -> return $ global (AST.Name gvar)
+    Nothing -> call gvar [AST.ConstantOperand (C.Int 32 0)]
   where
-    gvar = findRealVarname varname globVars
+    gvar = getGlobalVar varname globVars
 
 -------------------------------------------------------------------------------
 
@@ -293,6 +291,7 @@ toArgs = map (\x -> (x, []))
 
 -- Effects
 call :: AST.Operand -> [AST.Operand] -> Codegen AST.Operand
+call f a | trace ("CALL: " ++ (show f) ++ " ---> " ++ (show a)) False = undefined
 call fn args = instr $ AST.Call False CC.C [] (Right fn) (toArgs args) [] []
 
 alloca :: AST.Type -> Codegen AST.Operand

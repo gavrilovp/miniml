@@ -81,12 +81,13 @@ codegenTop globVars (S.Def var_name (S.Fun name argname argtype rettype body)) =
     pseudo_body = (S.Apply (S.Var name) (S.Var argname))
 codegenTop globVars (S.Def var_name expr) = do
   --define ty fname fnargs bls
-  globalVar ty var_name (C.Int 32 0)
+  traceM $ "NAME" ++ var_name
+  globalVar ty var_name args bls
   where
     ty' = S.TInt -- typeOf expr
     ty = toType $ ty'
     fname = var_name ++ "_fn"
-    (fnargs, bls) = genFun globVars (S.Fun fname "_" ty' ty' expr)
+    (args, bls) = genFun globVars (S.Fun fname "_" ty' ty' expr)
 
 codegenTop globVars (S.Expr exp) = do
   define int "main" [] blks
