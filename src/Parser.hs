@@ -64,7 +64,7 @@ applyP = do
 
 exprP :: Parser Expr
 exprP = parens exprP <|> opP <|> funP <|> ifP <|> applyP
-        <|> intP <|> boolP <|> varP <* eof           
+        <|> intP <|> boolP <|> varP
 
 defP :: Parser ToplevelCmd
 defP = do
@@ -75,4 +75,4 @@ defP = do
   return $ Def var expr
 
 toplevelCmdP :: Parser ToplevelCmd
-toplevelCmdP = defP <|> Expr <$> exprP
+toplevelCmdP = (defP <|> Expr <$> exprP) <* eof
