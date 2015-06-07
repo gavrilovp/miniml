@@ -56,7 +56,7 @@ funP = do
 
 applyP :: Parser Expr
 applyP = do
-  let hack = parens exprP <|> funP <|> intP <|> varP
+  let hack = parens exprP <|> funP <|> intP <|> varP <|> boolP
       apP :: Parser (Expr -> Expr -> Expr)
       apP = return Apply
   chainl1 hack apP
