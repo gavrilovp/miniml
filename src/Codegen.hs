@@ -40,6 +40,7 @@ runLLVM = flip (execState . unLLVM)
 toType :: S.Ty -> AST.Type
 toType S.TInt = int
 toType S.TBool = bool
+toType (S.TArrow _ _) = error "Can't print function prototype"
 
 emptyState :: String -> GeneratorState
 emptyState label = GeneratorState {
