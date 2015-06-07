@@ -3,6 +3,7 @@
 
 module Codegen where
 
+import Data.Int
 import Data.Word
 import Data.String
 import Data.List
@@ -29,6 +30,7 @@ type Vars = Map.Map String (Int, String, S.Ty)
 data GeneratorState = GeneratorState {
     modstate    :: AST.Module
   , vars        :: Vars
+  , ty          :: S.Ty
 }
 
 newtype LLVM a = LLVM { unLLVM :: State GeneratorState a }
@@ -40,11 +42,13 @@ runLLVM = flip (execState . unLLVM)
 toType :: S.Ty -> AST.Type
 toType S.TInt = int
 toType S.TBool = bool
+toType (S.TArrow _ _) = error "Can't print function prototype"
 
 emptyState :: String -> GeneratorState
 emptyState label = GeneratorState {
     modstate = (AST.defaultModule { AST.moduleName = label })
   , vars = Map.empty :: Vars
+  , ty = S.TInt
 }
 
 genGlobalName :: String -> S.Ty -> LLVM String
@@ -130,14 +134,14 @@ data CodegenState
     currentBlock :: AST.Name                    -- Name of the active block to append to
   , blocks       :: Map.Map AST.Name BlockState -- Blocks for function
   , symtab       :: SymbolTable                 -- Function scope symbol table
-  , blockCount   :: Int                         -- Count of basic blocks
+  , blockCount   :: Int32                       -- Count of basic blocks
   , count        :: Word                        -- Count of unnamed instructions
   , names        :: Names                       -- Name Supply
   } deriving Show
 
 data BlockState
   = BlockState {
-    idx   :: Int                                -- Block index
+    idx   :: Int32                              -- Block index
   , stack :: [AST.Named AST.Instruction]        -- Stack of instructions
   , term  :: Maybe (AST.Named AST.Terminator)   -- Block terminator
   } deriving Show
@@ -164,7 +168,7 @@ makeBlock (l, (BlockState _ s t)) = BasicBlock l s (maketerm t)
 entryBlockName :: String
 entryBlockName = "entry"
 
-emptyBlock :: Int -> BlockState
+emptyBlock :: Int32 -> BlockState
 emptyBlock i = BlockState i [] Nothing
 
 emptyCodegen :: CodegenState
