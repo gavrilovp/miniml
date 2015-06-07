@@ -51,7 +51,6 @@ genFun v (S.Fun name argname argtype rettype body) =
       cgen v body >>= ret
 
 codegenTop :: Vars -> S.ToplevelCmd -> LLVM ()
-codegenTop a c | trace (show c) False = undefined
 codegenTop globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   define (toType rettype) var_name var_args var_bls
@@ -92,7 +91,12 @@ cgen :: Vars -> S.Expr -> Codegen AST.Operand
 cgen _ (S.Int n) = return $ cons $ C.Int 32 n
 cgen _ (S.Bool True) = return $ cons $ C.Int 1 1
 cgen _ (S.Bool False) = return $ cons $ C.Int 1 0
-cgen globVars (S.Var x) = getvar globVars x >>= load
+cgen globVars (S.Var x) = do
+  var <- getvar globVars x
+  case var of
+    (Right v)           -> load v
+    (Left global_name)  -> cgen globVars (S.Apply (S.Var global_name) (S.Int 0))
+
 cgen globVars (S.Apply (S.Var fn) arg) = do
   larg <- cgen globVars arg
   call (externf int (AST.Name fn)) [larg]

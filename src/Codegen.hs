@@ -61,10 +61,10 @@ genGlobalName l = do
         new_name i = (if i /= 1 then l ++ "_" ++ (show i) else l) ++ _global
         update i = Map.insert l (i, new_name i) vars_list
 
-getGlobalVar :: String -> Vars -> AST.Operand
+getGlobalVar :: String -> Vars -> String
 getGlobalVar name vars =
   case Map.lookup name vars of
-    Just (_, n) -> externf int (AST.Name n)
+    Just (_, n) -> n
     Nothing     -> error $ "Variable '" ++ name ++ "' not found in scope"
 
 addDefn :: AST.Definition -> LLVM ()
@@ -243,12 +243,12 @@ assign var x = do
   lcls <- gets symtab
   modify $ \s -> s { symtab = [(var, x)] ++ lcls }
 
-getvar :: Vars -> String -> Codegen AST.Operand
+getvar :: Vars -> String -> Codegen (Either String AST.Operand)
 getvar globVars varname = do
   syms <- gets symtab
   case lookup varname syms of
-    Just x  -> return x
-    Nothing -> call gvar [AST.ConstantOperand (C.Int 32 0)]
+    Just x  -> return $ Right x
+    Nothing -> return $ Left gvar
   where
     gvar = getGlobalVar varname globVars
 
@@ -291,7 +291,6 @@ toArgs = map (\x -> (x, []))
 
 -- Effects
 call :: AST.Operand -> [AST.Operand] -> Codegen AST.Operand
-call f a | trace ("CALL: " ++ (show f) ++ " ---> " ++ (show a)) False = undefined
 call fn args = instr $ AST.Call False CC.C [] (Right fn) (toArgs args) [] []
 
 alloca :: AST.Type -> Codegen AST.Operand
