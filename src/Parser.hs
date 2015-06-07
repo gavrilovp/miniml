@@ -15,8 +15,8 @@ intP :: Parser Expr
 intP = Int <$> try integer
 
 boolP :: Parser Expr
-boolP =     Bool True <$ (try $ reserved "true")
-        <|> Bool False <$ (try $ reserved "false")
+boolP =     (Bool True <$ (try $ reserved "true"))
+        <|> (Bool False <$ (try $ reserved "false"))
 
 termP :: Parser Expr
 termP = parens exprP <|> try applyP <|> intP <|> varP  
@@ -35,9 +35,8 @@ ifP = do
   return $ If cond expr1 expr2
 
 tyP :: Parser Ty
-tyP = do
-  reserved "int"
-  return TInt
+tyP =     TInt <$ (try $ reserved "int")
+      <|> TBool <$ (try $ reserved "bool")
 
 funP :: Parser Expr
 funP = do

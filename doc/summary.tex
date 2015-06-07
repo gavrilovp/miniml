@@ -229,6 +229,38 @@ expecting "(", "fun", natural, identifier, "if", "true" or "false"
 Парсер был реализован с помощью библиотеки parsec. Реализация находится
 в приложении 2.
 
+\section{Семантический анализ}
+\subsection{Вывод типов}
+Вывод типов позволяет компилятору узнать тип значения выражения, не
+указывая его явно. Например, ясно, что выражение e1 + e2 вычисляется
+в тип int, а его операнды e1 и e2 также должны быть типа int.
+
+
+Абстрактное синтаксическое дерево, полученное на выходе синтакического
+анализатора проверяет модулем TypeCheck.hs на согласованность типов.
+
+
+Исходный код модуля представлен в приложении 3.
+
+\subsection{Обнаружение ошибок}
+Примеры обнаружение ошибок несогласованности типов представлены
+в листинге \ref{lst:type_check_errors}.
+
+\begin{lstlisting}[ language=haskell
+                  , caption=Сообщения о несогласованности типов
+                  , label=lst:type_check_errors]
+MiniML> let a = true
+a : bool
+MiniML> a + 2
+miniml: TE "Var "a" has type bool but is used as if it has type int"
+
+MiniML> if 1 then false else true
+miniml: TE "Int 1 has type int but is used as if it has type bool"
+\end{lstlisting}
+
+\section{Вывод}
+
+
 \section{Список литературы}
 \printbibliography[heading=none]
 
@@ -242,6 +274,12 @@ expecting "(", "fun", natural, identifier, "if", "true" or "false"
 \addcontentsline{toc}{section}{Приложение 2}
 \subsection*{Исходный код синтаксического анализатора}
 \lstinputlisting{../src/Parser.hs}
+\clearpage
+
+\section*{\titleline[r]{Приложение 3}} 
+\addcontentsline{toc}{section}{Приложение 3}
+\subsection*{Исходный код семантического анализатора}
+\lstinputlisting{../src/TypeCheck.hs}
 \clearpage
 
 \end{document}
