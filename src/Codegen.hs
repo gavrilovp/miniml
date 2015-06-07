@@ -47,6 +47,14 @@ define retty label argtys body = addDefn $
   , basicBlocks = body
   }
 
+globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
+globalVar ty name value = addDefn $
+  AST.GlobalDefinition $ globalVariableDefaults {
+    name        = AST.Name name
+  , type'       = ty
+  , initializer = Just value
+  }
+
 external :: AST.Type -> String -> [(AST.Type, AST.Name)] -> LLVM ()
 external retty label argtys = addDefn $
   AST.GlobalDefinition $ functionDefaults {
@@ -65,6 +73,11 @@ int = AST.IntegerType 32
 
 bool :: AST.Type
 bool = AST.IntegerType 1
+
+one = cons $ C.Int 1 1
+zero = cons $ C.Int 1 0
+false = zero
+true = one
 
 -------------------------------------------------------------------------------
 -- Names
@@ -272,3 +285,6 @@ cbr cond tr fl = terminator $ AST.Do $ AST.CondBr cond tr fl []
 
 ret :: AST.Operand -> Codegen (AST.Named AST.Terminator)
 ret val = terminator $ AST.Do $ AST.Ret (Just val) []
+
+phi :: AST.Type -> [(AST.Operand, AST.Name)] -> Codegen AST.Operand
+phi ty incoming = instr $ AST.Phi ty incoming []

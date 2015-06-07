@@ -8,8 +8,9 @@ import Control.Monad
 import Control.Monad.State
 import System.IO
 import Text.ParserCombinators.Parsec hiding (State)
-import qualified Data.Map as M
 import Data.Aeson.Encode.Pretty
+import qualified Data.Map as M
+import qualified LLVM.General.AST as AST
 import qualified Data.ByteString.Lazy as B
 
 import Syntax
@@ -17,8 +18,12 @@ import Lexer
 import Parser (toplevelCmdP)
 import TypeCheck
 import Emit
+import Codegen
 
 import Debug.Trace
+
+initModule :: AST.Module
+initModule = emptyModule "MiniML"
 
 parseFile :: String -> IO ToplevelCmd
 parseFile file = do
@@ -43,21 +48,26 @@ exec (Expr e) = do
 shell :: IO ()
 shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
-  shell' (M.empty :: Ctx)
+  shell' (initModule) (M.empty :: Ctx)
 
-shell' :: Ctx ->  IO ()
-shell' ctx = do
+shell' :: AST.Module -> Ctx -> IO ()
+shell' mod ctx = do
   putStr "MiniML> "
   hFlush stdout
   cmd <- getLine
   case parse toplevelCmdP "" cmd of
-   Left e -> print e >> shell' ctx
-   Right ast -> putStrLn str >> (B.putStrLn $ encodePretty ast) >> shell' ctx'
+   Left e -> print e >> shell' mod ctx
+   Right ast -> do
+     mod' <- codegen mod ast
+     putStrLn str >> (B.putStrLn $ encodePretty ast) >> shell' mod' ctx'
      where
        (str, ctx') = runState (exec ast) ctx
+       res = "AST: " ++ str ++ "\nLLVM bytecode:\n" ++ bytecode
+       bytecode = ""
 
 main :: IO ()
 main = do
+{--
   ast <- parseFile "tests/let.miniml" 
   B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/if.miniml"
@@ -70,4 +80,5 @@ main = do
   B.putStrLn $ encodePretty ast
   ast <- parseFile "tests/minus.miniml"
   B.putStrLn $ encodePretty ast
+--}
   shell
