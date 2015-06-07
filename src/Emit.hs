@@ -24,7 +24,6 @@ import qualified Syntax as S
 import Codegen
 import JIT
 
-import Debug.Trace
 
 -------------------------------------------------------------------------------
 -- Code generation
@@ -47,7 +46,6 @@ genFun v (S.Fun name argname argtype rettype body) =
       cgen v body >>= ret
 
 codegenTop :: TC.Ctx -> Vars -> S.ToplevelCmd -> LLVM ()
-codegenTop _ _ a | trace (show a) False = undefined
 codegenTop _ globVars (S.Def var_name (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   define (toType rettype) var_name var_args var_bls

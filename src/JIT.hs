@@ -19,10 +19,10 @@ import LLVM.General.Analysis
 import qualified LLVM.General.ExecutionEngine as EE
 import qualified Codegen as C
 
-foreign import ccall "dynamic" haskFun :: FunPtr (IO Int) -> (IO Int)
+foreign import ccall "dynamic" haskFun :: FunPtr (IO Int32) -> (IO Int32)
 
-run :: FunPtr a -> IO Int
-run fn = haskFun (castFunPtr fn :: FunPtr (IO Int))
+run :: FunPtr a -> IO Int32
+run fn = haskFun (castFunPtr fn :: FunPtr (IO Int32))
 
 jit :: Context -> (EE.MCJIT -> IO a) -> IO a
 jit c = EE.withMCJIT c optlevel model ptrelim fastins
