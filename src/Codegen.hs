@@ -8,6 +8,7 @@ import Data.String
 import Data.List
 import Data.Function
 import qualified Data.Map as Map
+import qualified Syntax as S
 
 import Control.Monad.State
 import Control.Applicative
@@ -24,45 +25,69 @@ import qualified LLVM.General.AST.IntegerPredicate as IP
 -- Module Level
 -------------------------------------------------------------------------------
 
-newtype LLVM a = LLVM { unLLVM :: State AST.Module a }
-  deriving (Functor, Applicative, Monad, MonadState AST.Module)
+type Vars = Map.Map String (Int, String, S.Ty)
+data GeneratorState = GeneratorState {
+    modstate    :: AST.Module
+  , vars        :: Vars
+}
 
-runLLVM :: AST.Module -> LLVM a -> AST.Module
+newtype LLVM a = LLVM { unLLVM :: State GeneratorState a }
+  deriving (Functor, Applicative, Monad, MonadState GeneratorState)
+
+runLLVM :: GeneratorState -> LLVM a -> GeneratorState
 runLLVM = flip (execState . unLLVM)
 
-emptyModule :: String -> AST.Module
-emptyModule label = AST.defaultModule { AST.moduleName = label }
+toType :: S.Ty -> AST.Type
+toType S.TInt = int
+toType S.TBool = bool
+
+emptyState :: String -> GeneratorState
+emptyState label = GeneratorState {
+    modstate = (AST.defaultModule { AST.moduleName = label })
+  , vars = Map.empty :: Vars
+}
+
+genGlobalName :: String -> S.Ty -> LLVM String
+genGlobalName l ty = do
+  vars_list <- gets vars
+  let (new_vars, name) = getName_impl vars_list
+  modify $ \s -> s { vars = new_vars }
+  return name
+  where
+    getName_impl vars_list =
+      case Map.lookup l vars_list of
+        Nothing -> ((update 1), (new_name 1))
+        Just (i, name, _) -> ((update (i + 1)), (new_name (i + 1)))
+      where
+        new_name i = (if i /= 1 then l ++ "_" ++ (show i) else l) ++ "_global"
+        update i = Map.insert l (i, (new_name i), ty) vars_list
+
+getGlobalVar :: String -> Vars -> (String, S.Ty)
+getGlobalVar name vars =
+  case Map.lookup name vars of
+    Just (_, n, ty) -> (n, ty)
+    Nothing         -> error $ "Variable '" ++ name ++ "' not found in scope"
 
 addDefn :: AST.Definition -> LLVM ()
 addDefn d = do
-  defs <- gets AST.moduleDefinitions
-  modify $ \s -> s { AST.moduleDefinitions = defs ++ [d] }
+  st <- gets modstate
+  let defs = AST.moduleDefinitions st
+      m_state = st { AST.moduleDefinitions = defs ++ [d] }
+  modify $ \s -> s { modstate = m_state }
 
 define :: AST.Type -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
-define retty label argtys body = addDefn $
-  AST.GlobalDefinition $ functionDefaults {
+define retty label argtys body = do
+  addDefn $ AST.GlobalDefinition $ functionDefaults {
     name        = AST.Name label
   , parameters  = ([AST.Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
   , basicBlocks = body
   }
 
-globalVar :: AST.Type -> String -> C.Constant -> LLVM ()
-globalVar ty name value = addDefn $
-  AST.GlobalDefinition $ globalVariableDefaults {
-    name        = AST.Name name
-  , type'       = ty
-  , initializer = Just value
-  }
-
-external :: AST.Type -> String -> [(AST.Type, AST.Name)] -> LLVM ()
-external retty label argtys = addDefn $
-  AST.GlobalDefinition $ functionDefaults {
-    name        = AST.Name label
-  , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
-  , returnType  = retty
-  , basicBlocks = []
-  }
+globalVar :: S.Ty -> String -> [(AST.Type, AST.Name)] -> [BasicBlock] -> LLVM ()
+globalVar ty name args block = do
+  real_name <- genGlobalName name ty
+  define (toType ty) real_name args block
 
 ---------------------------------------------------------------------------------
 -- Types
@@ -89,7 +114,7 @@ uniqueName :: String -> Names -> (String, Names)
 uniqueName nm ns =
   case Map.lookup nm ns of
     Nothing -> (nm, Map.insert nm 1 ns)
-    Just ix -> (nm ++ show ix, Map.insert nm (ix+1) ns)
+    Just ix -> (nm ++ show ix, Map.insert nm (ix + 1) ns)
 
 instance IsString AST.Name where
   fromString = AST.Name . fromString
@@ -154,7 +179,7 @@ fresh = do
   modify $ \s -> s { count = 1 + i }
   return $ i + 1
 
-instr :: AST.Instruction -> Codegen (AST.Operand)
+instr :: AST.Instruction -> Codegen AST.Operand
 instr ins = do
   n <- fresh
   let ref = (AST.UnName n)
@@ -219,12 +244,14 @@ assign var x = do
   lcls <- gets symtab
   modify $ \s -> s { symtab = [(var, x)] ++ lcls }
 
-getvar :: String -> Codegen AST.Operand
-getvar var = do
+getvar :: Vars -> String -> Codegen (Either (String, S.Ty) AST.Operand)
+getvar globVars varname = do
   syms <- gets symtab
-  case lookup var syms of
-    Just x  -> return x
-    Nothing -> error $ "Local variable not in scope: " ++ show var
+  case lookup varname syms of
+    Just x  -> return $ Right x
+    Nothing -> return $ Left gvar
+  where
+    gvar = getGlobalVar varname globVars
 
 -------------------------------------------------------------------------------
 
@@ -232,8 +259,8 @@ getvar var = do
 local :: AST.Name -> AST.Operand
 local = AST.LocalReference int
 
-global :: AST.Name -> C.Constant
-global = C.GlobalReference int
+global :: AST.Name -> AST.Operand
+global n = AST.ConstantOperand $ C.GlobalReference int n
 
 externf :: AST.Type -> AST.Name -> AST.Operand
 externf ty = AST.ConstantOperand . C.GlobalReference ty
