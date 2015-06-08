@@ -66,6 +66,8 @@
 \numberwithin{equation}{section}
 %\usetikzlibrary{shapes,arrows,trees}
 
+\newcommand{\icode}[1]{\texttt{#1}} % inline code
+
 % 20 - 25 стр достаточно
 
 \bibliography{reference_list}
@@ -274,7 +276,7 @@ miniml: TE "Int 1 has type int but is used as if it has type bool"
 \input{backend}
 
 \section{Вывод}
-В рамках данной курсовой работы был реализован компилятор
+В рамках данной курсовой работы был реализован платформонезависимый компилятор
 языка MiniML. Были реализованы лексический, синтаксический и
 семантический анализаторы. Результирующее абстрактное синтаксическое
 дерево представляется в формате JSON. Сгенерированное ACT дерево преобразуется
