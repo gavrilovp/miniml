@@ -62,7 +62,7 @@ applyP = do
   chainl1 hack apP
 
 exprP :: Parser Expr
-exprP = parens exprP <|> opP <|> funP <|> ifP <|> applyP
+exprP = opP <|> (parens exprP) <|> funP <|> ifP <|> applyP
         <|> intP <|> boolP <|> varP
 
 defP :: Parser ToplevelCmd

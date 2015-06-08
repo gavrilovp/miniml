@@ -17,7 +17,9 @@ instance Exception TypeError
 type Ctx = M.Map Name Ty
 
 typeOf :: Ctx -> Expr -> Ty
-typeOf ctx (Var v) = ctx M.! v -- replace with my exception?
+typeOf ctx (Var v) = case M.lookup v ctx of
+                      (Just ty) -> ty
+                      Nothing -> throw (TE ("there is no " ++ show v ++ " in context"))
 typeOf _ (Int _) = TInt
 typeOf _ (Bool _) = TBool
 typeOf ctx (Times e1 e2)
