@@ -61,8 +61,7 @@ codegenTop ctx globVars (S.Def var_name expr) = do
   modify $ \s -> s { ty = ty' }
   where
     ty' = TC.typeOf ctx expr
-    fname = var_name ++ "_fn"
-    (args, bls) = genFun globVars (S.Fun fname "_" S.TBool ty' expr)
+    (args, bls) = genFun globVars (S.Fun var_name "_" S.TBool ty' expr)
 codegenTop ctx globVars (S.Expr (S.Fun name argname argtype rettype body)) = do
   define (toType rettype) name fnargs bls
   modify $ \s -> s { ty = rettype }

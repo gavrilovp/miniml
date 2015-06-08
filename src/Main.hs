@@ -41,7 +41,7 @@ exec (Expr e) = do
   ctx <- get
   let ty = typeOf ctx e
   return $ "- : " ++ show ty
-    
+
 shell :: IO ()
 shell = do
   putStrLn "MiniML. Press Ctrl-C or Ctrl-D to exit."
